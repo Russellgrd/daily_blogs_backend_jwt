@@ -86,6 +86,24 @@ app.post('/login', deserializeUser, async (req, res) => {
 
 app.get('/blogs', deserializeUser, (req, res) => {
     res.json({ "blogs": "Hello there is the blogs for today." })
+});
+
+app.post('/logout', deserializeUser, async (req, res) => {
+    console.log('logout route');
+    //@ts-ignore
+    const { accessToken, refreshToken } = req.cookies;
+    console.log(accessToken, refreshToken);
+    if (!refreshToken) return res.sendStatus(403);
+    //@ts-ignore
+    let user = await UserModel.findOne({ email: req.user.email });
+    if (user) {
+        user.refreshToken = "";
+        user.save();
+        res.status(200).json({ "message": "successfully logged out" });
+    } else {
+        res.status(403).json({ "message": "user does not exist" });
+    }
+
 })
 
 app.post('/logout', deserializeUser, async (req, res) => {
