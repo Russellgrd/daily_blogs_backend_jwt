@@ -2,6 +2,18 @@ POST http://localhost:3000/register
 content-type: application/json
 
 {
-    "email": "russelldriverymail.com",
+    "email": "",
     "password": "Summertime01!"
 }
+
+###
+
+POST http://localhost:3000/login
+Content-Type: application/json
+Cookie: refreshToken=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6InBldGVyLmNsYXl0b25AZ21haWwuY29tIiwiaWF0IjoxNjkwNDQwMzgxLCJleHAiOjE3MjE5OTc5ODF9.RowAHiOurCYkPTwIPgFy7WCFsqBCc2kW3u-43SZBnq4; accessToken=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6InBldGVyLmNsYXl0b25AZ21haWwuY29tIiwiaWF0IjoxNjkwNDQwMzgxLCJleHAiOjE2OTA0NDA5ODF9.3zjMsB-8Rr_0z7h7NEoG8HHZ-tru5yO3j8tNr9G-1i0
+
+{
+    "email": "peter.clayton@gmail.com",
+    "password": "Summertime01!"
+}
+
