@@ -15,12 +15,9 @@ import { deserializeUser } from './middleware/deserializeUser.js';
 
 const app = express();
 
-
-
 app.use(express.json());
 // app.use(deserializeUser);
 app.use(cookieParser());
-
 
 
 mongoose.connect(process.env.MONGO_DB_URL!)
@@ -30,8 +27,6 @@ mongoose.connect(process.env.MONGO_DB_URL!)
     .catch((err) => {
         console.log('issue trying to connect to mongoDB', err);
     })
-
-
 
 app.post('/register', async (req, res) => {
     let { email, password } = req.body;
