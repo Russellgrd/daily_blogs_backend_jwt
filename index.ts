@@ -11,14 +11,17 @@ import UserModel from './models/User.js';
 import { ValidationError } from 'yup';
 import cookieParser from 'cookie-parser';
 import { deserializeUser } from './middleware/deserializeUser.js';
+import cors from 'cors';
+import MailGun from 'mailgun.js';
+import formData from 'form-data';
+const mailgun = new MailGun(formData);
 
-
+const mg = mailgun.client({ username: 'api', key: process.env.MAILGUN_API_KEY || 'key-yourkeyhere' });
 const app = express();
-
 app.use(express.json());
 // app.use(deserializeUser);
 app.use(cookieParser());
-
+app.use(cors({ credentials: true, origin: 'http://localhost:5173' }));
 
 mongoose.connect(process.env.MONGO_DB_URL!)
     .then((resp) => {
@@ -29,18 +32,34 @@ mongoose.connect(process.env.MONGO_DB_URL!)
     })
 
 app.post('/register', async (req, res) => {
-    let { email, password } = req.body;
+    let { userName, email, password } = req.body;
     try {
-        const isUser = await UserModel.findOne({ email })
-        if (isUser) return res.status(400).json({ message: "user already exists" });
+        const isUser = await UserModel.findOne({ email });
+        const isUserName = await UserModel.findOne({ userName });
+        if (isUser) {
+            return res.status(409).json({ message: "user already exists" });
+        }
+        if (isUserName) {
+            return res.status(409).json({ message: "username already taken" });
+        }
         await userValidationSchema.validate(req.body);
         const hashedPassword = await bcrypt.hash(password, 12);
         let newUser = new UserModel({
+            userName: userName,
             email: email,
             password: hashedPassword
         })
         await newUser.save();
-        res.json({ message: email + " " + "has been added to the database" });
+        mg.messages.create('sandboxb2803770d321422094759b7502246caa.mailgun.org', {
+            from: "Excited User <mailgun@sandbox-123.mailgun.org>",
+            to: [`${newUser.email}`],
+            subject: "Hi there!",
+            text: "Testing some Mailgun awesomness!",
+            html: "<h1>Testing some Mailgun awesomness!</h1>"
+        })
+            .then(msg => console.log(msg)) // logs response data
+            .catch(err => console.error(err)); // logs any error
+        res.json({ message: userName + " " + "has been added to the database" });
     } catch (err) {
         if (err instanceof ValidationError) {
             return res.status(400).json({ message: err.message });
@@ -70,7 +89,7 @@ app.post('/login', deserializeUser, async (req, res) => {
             user.save();
             res.cookie('refreshToken', refreshToken, { httpOnly: true, sameSite: "none", secure: true, maxAge: 24 * 60 * 60 * 1000 });
             res.cookie('accessToken', accessToken, { httpOnly: true, sameSite: "none" })
-            return res.json({ accessToken, refreshToken });
+            return res.json({ "message": "Successfully logged in. Redirecting." });
         } else {
             res.sendStatus(401).json({ message: "wrong username or password" });
         }
