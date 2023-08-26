@@ -15,6 +15,7 @@ import cors from 'cors';
 import MailGun from 'mailgun.js';
 import formData from 'form-data';
 const mailgun = new MailGun(formData);
+import formidable from "express-formidable";
 
 const mg = mailgun.client({ username: 'api', key: process.env.MAILGUN_API_KEY || 'key-yourkeyhere' });
 const app = express();
@@ -22,6 +23,8 @@ app.use(express.json());
 // app.use(deserializeUser);
 app.use(cookieParser());
 app.use(cors({ credentials: true, origin: 'http://localhost:5173' }));
+app.use(formidable());
+
 
 mongoose.connect(process.env.MONGO_DB_URL!)
     .then((resp) => {
@@ -50,15 +53,19 @@ app.post('/register', async (req, res) => {
             password: hashedPassword
         })
         await newUser.save();
-        mg.messages.create('sandboxb2803770d321422094759b7502246caa.mailgun.org', {
-            from: "Excited User <mailgun@sandbox-123.mailgun.org>",
-            to: [`${newUser.email}`],
-            subject: "Hi there!",
-            text: "Testing some Mailgun awesomness!",
-            html: "<h1>Testing some Mailgun awesomness!</h1>"
-        })
-            .then(msg => console.log(msg)) // logs response data
-            .catch(err => console.error(err)); // logs any error
+
+        //implement email service.
+
+        // mg.messages.create('sandboxb2803770d321422094759b7502246caa.mailgun.org', {
+        //     from: "Excited User <mailgun@sandbox-123.mailgun.org>",
+        //     to: [`${newUser.email}`],
+        //     subject: "Hi there!",
+        //     text: "Testing some Mailgun awesomness!",
+        //     html: "<h1>Testing some Mailgun awesomness!</h1>"
+        // })
+        //     .then(msg => console.log(msg)) // logs response data
+        //     .catch(err => console.error(err)); // logs any error
+
         res.json({ message: userName + " " + "has been added to the database" });
     } catch (err) {
         if (err instanceof ValidationError) {
@@ -68,8 +75,8 @@ app.post('/register', async (req, res) => {
 
 })
 
-app.post('/login', deserializeUser, async (req, res) => {
 
+app.post('/login', deserializeUser, async (req, res) => {
     //if user already exists bypass login process
     //@ts-ignore
     if (req.user) {
@@ -83,12 +90,12 @@ app.post('/login', deserializeUser, async (req, res) => {
         if (!user) return res.status(400).json({ message: "user does not exist" })
         const validPassword = await bcrypt.compare(password, user.password);
         if (validPassword) {
-            let accessToken = jwt.sign({ email }, process.env.ACCESS_TOKEN_KEY!, { expiresIn: "10s" });
+            let accessToken = jwt.sign({ email }, process.env.ACCESS_TOKEN_KEY!, { expiresIn: "30m" });
             let refreshToken = jwt.sign({ email }, process.env.REFRESH_TOKEN_KEY!, { expiresIn: "1y" });
             user.refreshToken = refreshToken;
             user.save();
             res.cookie('refreshToken', refreshToken, { httpOnly: true, sameSite: "none", secure: true, maxAge: 24 * 60 * 60 * 1000 });
-            res.cookie('accessToken', accessToken, { httpOnly: true, sameSite: "none" })
+            res.cookie('accessToken', accessToken, { httpOnly: true, sameSite: "none", secure: true, })
             return res.json({ "message": "Successfully logged in. Redirecting." });
         } else {
             res.sendStatus(401).json({ message: "wrong username or password" });
@@ -99,39 +106,51 @@ app.post('/login', deserializeUser, async (req, res) => {
 })
 
 app.get('/blogs', deserializeUser, (req, res) => {
-    res.json({ "blogs": "Hello there is the blogs for today." })
+    //@ts-ignore
+    console.log('req.user is.....', req.user);
+    //@ts-ignore
+    if (req.user) {
+        res.json({ "blogs": "Hello there is the blogs for today." })
+    } else {
+        res.json({ "message": "Not Authorized to view this blog" });
+    }
 });
 
 app.post('/logout', deserializeUser, async (req, res) => {
-    console.log('logout route');
     //@ts-ignore
     const { accessToken, refreshToken } = req.cookies;
-    console.log(accessToken, refreshToken);
     if (!refreshToken) return res.sendStatus(403);
     //@ts-ignore
     let user = await UserModel.findOne({ email: req.user.email });
     if (user) {
         user.refreshToken = "";
         user.save();
+        res.cookie('refreshToken', "", { httpOnly: true, sameSite: "none", secure: true, maxAge: 0 });
+        res.cookie('accessToken', "", { httpOnly: true, sameSite: "none", secure: true, maxAge: 0 });
         res.status(200).json({ "message": "successfully logged out" });
     } else {
         res.status(403).json({ "message": "user does not exist" });
     }
-
 })
 
-app.post('/logout', deserializeUser, async (req, res) => {
-    //@ts-ignore
-    if (req.user) {
-        //@ts-ignore
-        const { email } = req.user;
-        let dbUser = await UserModel.findOne({ email });
-        dbUser!.refreshToken = "";
-        res.status(200).json({ "message": "successfully logged out" });
-    } else {
-        res.status(403).json({ "message": "already logged out" });
-    }
+app.post('/newblogentry', deserializeUser, (req, res) => {
+    console.log(req.files);
+    res.statusCode = 200;
+    res.json({ "message": "blog received ok" });
 })
+
+// app.post('/logout', deserializeUser, async (req, res) => {
+//     //@ts-ignore
+//     if (req.user) {
+//         //@ts-ignore
+//         const { email } = req.user;
+//         let dbUser = await UserModel.findOne({ email });
+//         dbUser!.refreshToken = "";
+//         res.status(200).json({ "message": "successfully logged out" });
+//     } else {
+//         res.status(403).json({ "message": "already logged out" });
+//     }
+// })
 
 
 app.listen(3000, () => {

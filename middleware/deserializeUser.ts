@@ -40,7 +40,7 @@ export const deserializeUser = async (req: Request, res: Response, next: NextFun
                 if (dbUser?.refreshToken === refreshToken) {
                     console.log('issuing a new token');
                     //database refresh token matches cookie refresh token and validated.  return new access token
-                    const newAccessToken = jwt.sign({ email }, process.env.ACCESS_TOKEN_KEY!, { expiresIn: "10s" });
+                    const newAccessToken = jwt.sign({ email }, process.env.ACCESS_TOKEN_KEY!, { expiresIn: "30m" });
                     res.cookie('accessToken', newAccessToken, { httpOnly: true, sameSite: "none", secure: true, maxAge: 24 * 60 * 60 * 1000 });
                     return next();
                 } else {
