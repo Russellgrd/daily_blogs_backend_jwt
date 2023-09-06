@@ -17,3 +17,8 @@ Cookie: refreshToken=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6InBldGVyLm
     "password": "Summertime01!"
 }
 
+###
+
+GET http://localhost:3000/tester
+
+
