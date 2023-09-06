@@ -14,7 +14,7 @@ var NewBlogSchema = new mongoose_1["default"].Schema({
         type: String,
         required: true
     },
-    BlogImageName: {
+    blogImageName: {
         type: String
     }
 }, { timestamps: true });

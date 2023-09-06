@@ -141,8 +141,8 @@ app.post('/logout', deserializeUser, async (req, res) => {
     }
 })
 
-// const __filename = fileURLToPath(import.meta.url);
-// const __dirname = path.dirname(__filename);
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 // const uploadImagesFolder = path.join(__dirname, "public", "images");
 
 app.post('/newblogentry', deserializeUser, (req, res, next) => {
@@ -153,6 +153,7 @@ app.post('/newblogentry', deserializeUser, (req, res, next) => {
     form.parse(req, (err, fields, files) => {
         if (err) return res.status(400).json(err);
         if (files) {
+            console.log('FILES', files);
             const origName = files.blogImage[0].originalFilename;
             const origNameDateStamped = Date.now() + origName!;
             const oldPath = files.blogImage[0].filepath;
@@ -160,6 +161,7 @@ app.post('/newblogentry', deserializeUser, (req, res, next) => {
             fs.rename(oldPath, newPath, (err) => {
                 if (err) return console.log(err);
             });
+            console.log('file name', origNameDateStamped);
             const newBlog = new NewBlogSchema({
                 //@ts-ignore
                 email: req.user.email,
@@ -179,10 +181,13 @@ app.post('/newblogentry', deserializeUser, (req, res, next) => {
 
 });
 
-app.get('/images', (req, res) => {
-
-
-
+app.get('/images/:name', (req, res) => {
+    console.log('image requested');
+    let imageName = req.params.name;
+    console.log('IMAGE NAME >>>>>>', imageName);
+    const joinedPath = path.join(__dirname, "..", "images", imageName);
+    console.log('JOINED PATH', joinedPath)
+    res.sendFile(joinedPath);
 })
 // app.post('/logout', deserializeUser, async (req, res) => {
 //     //@ts-ignore

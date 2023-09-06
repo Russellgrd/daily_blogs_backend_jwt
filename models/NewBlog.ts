@@ -14,7 +14,7 @@ const NewBlogSchema = new mongoose.Schema({
         type: String,
         required: true
     },
-    BlogImageName: {
+    blogImageName: {
         type: String
     }
 },
