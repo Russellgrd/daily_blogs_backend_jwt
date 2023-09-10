@@ -39,7 +39,6 @@ mongoose.connect(process.env.MONGO_DB_URL!)
     })
 
 app.post('/register', async (req, res) => {
-    console.log('hello');
     let { userName, email, password } = req.body;
     try {
         const isUser = await UserModel.findOne({ email });
@@ -71,7 +70,7 @@ app.post('/register', async (req, res) => {
         //     .then(msg => console.log(msg)) // logs response data
         //     .catch(err => console.error(err)); // logs any error
 
-        res.json({ message: userName + " " + "has been added to the database" });
+        return res.json({ message: userName + " " + "has been added to the database" });
     } catch (err) {
         if (err instanceof ValidationError) {
             return res.status(400).json({ message: err.message });
@@ -85,7 +84,7 @@ app.post('/login', deserializeUser, async (req, res) => {
     //if user already exists bypass login process
     //@ts-ignore
     if (req.user) {
-        res.status(200).json({ message: "authenticated" });
+        return res.status(200).json({ message: "authenticated" });
     }
 
     try {
@@ -103,31 +102,32 @@ app.post('/login', deserializeUser, async (req, res) => {
             res.cookie('accessToken', accessToken, { httpOnly: true, sameSite: "none", secure: true, })
             return res.json({ "message": "Successfully logged in. Redirecting." });
         } else {
-            res.sendStatus(401).json({ message: "wrong username or password" });
+            return res.sendStatus(401).json({ message: "wrong username or password" });
         }
     } catch (err) {
-        res.sendStatus(401).json({ message: "email or password in incorrect format" });
+        return res.sendStatus(401).json({ message: "email or password in incorrect format" });
     }
 })
 
 app.get('/blogs', deserializeUser, async (req, res) => {
     //@ts-ignore
+    //@ts-ignore
     if (req.user) {
         try {
             const allBlogs = await NewBlogSchema.find()
-            res.status(200).json(allBlogs);
+            return res.status(200).json(allBlogs);
         } catch (err) {
-            res.status(500).json(err);
+            return res.status(500).json(err);
         }
     } else {
-        res.json({ "message": "Not Authorized to view this blog" });
+        return res.json({ "message": "Not Authorized to view this blog" });
     }
 });
 
-app.post('/logout', deserializeUser, async (req, res) => {
+app.get('/logout', deserializeUser, async (req, res) => {
     //@ts-ignore
     const { accessToken, refreshToken } = req.cookies;
-    if (!refreshToken) return res.sendStatus(403);
+    if (!refreshToken) return res.status(403).json({ "message": "User is not currently logged in" });
     //@ts-ignore
     let user = await UserModel.findOne({ email: req.user.email });
     if (user) {
@@ -135,9 +135,9 @@ app.post('/logout', deserializeUser, async (req, res) => {
         user.save();
         res.cookie('refreshToken', "", { httpOnly: true, sameSite: "none", secure: true, maxAge: 0 });
         res.cookie('accessToken', "", { httpOnly: true, sameSite: "none", secure: true, maxAge: 0 });
-        res.status(200).json({ "message": "successfully logged out" });
+        return res.status(200).json({ "message": "successfully logged out" });
     } else {
-        res.status(403).json({ "message": "user does not exist" });
+        return res.status(403).json({ "message": "user does not exist" });
     }
 })
 
@@ -147,13 +147,19 @@ const __dirname = path.dirname(__filename);
 
 app.post('/newblogentry', deserializeUser, (req, res, next) => {
     //@ts-ignore
-
-    console.log(req.user);
     const form = formidable({});
     form.parse(req, (err, fields, files) => {
         if (err) return res.status(400).json(err);
-        if (files) {
-            console.log('FILES', files);
+        if (Object.keys(files).length === 0) {
+            const newBlog = new NewBlogSchema({
+                //@ts-ignore
+                email: req.user.email,
+                blogTitle: fields.blogTitle[0],
+                blogBody: fields.blogBody[0],
+            });
+            newBlog.save();
+            return res.status(200).json({ "message": "blog successfully saved" });
+        } else {
             const origName = files.blogImage[0].originalFilename;
             const origNameDateStamped = Date.now() + origName!;
             const oldPath = files.blogImage[0].filepath;
@@ -161,7 +167,6 @@ app.post('/newblogentry', deserializeUser, (req, res, next) => {
             fs.rename(oldPath, newPath, (err) => {
                 if (err) return console.log(err);
             });
-            console.log('file name', origNameDateStamped);
             const newBlog = new NewBlogSchema({
                 //@ts-ignore
                 email: req.user.email,
@@ -170,37 +175,27 @@ app.post('/newblogentry', deserializeUser, (req, res, next) => {
                 blogImageName: origNameDateStamped
             })
             newBlog.save();
-            res.status(200).json({ "message": "blog successfully saved" });
-        }
+            return res.status(200).json({ "message": "blog successfully saved" });
 
-        // fs.rename(oldPath, newPath, (err) => {
-        //     if (err) return console.log("error saving file");
-        //     res.json({ "message": "image successfully saved" });
-        // })
+        }
     });
 
 });
 
 app.get('/images/:name', (req, res) => {
-    console.log('image requested');
     let imageName = req.params.name;
-    console.log('IMAGE NAME >>>>>>', imageName);
     const joinedPath = path.join(__dirname, "..", "images", imageName);
-    console.log('JOINED PATH', joinedPath)
-    res.sendFile(joinedPath);
+    return res.sendFile(joinedPath);
 })
-// app.post('/logout', deserializeUser, async (req, res) => {
-//     //@ts-ignore
-//     if (req.user) {
-//         //@ts-ignore
-//         const { email } = req.user;
-//         let dbUser = await UserModel.findOne({ email });
-//         dbUser!.refreshToken = "";
-//         res.status(200).json({ "message": "successfully logged out" });
-//     } else {
-//         res.status(403).json({ "message": "already logged out" });
-//     }
-// })
+
+app.get('/auth', deserializeUser, async (req, res) => {
+    //@ts-ignore
+    if (req.user) {
+        return res.json({ authenticated: true })
+    } else {
+        return res.status(401).json({ authenticated: false });
+    }
+});
 
 
 app.listen(3000, () => {

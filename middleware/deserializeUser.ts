@@ -22,13 +22,12 @@ export const deserializeUser = async (req: Request, res: Response, next: NextFun
         const { email } = decoded
         //@ts-ignore
         req.user = { email };
-        console.log('token valid, user added to reqObject as', { email });
-        next();
+        return next();
     } catch (err: unknown) {
         //if invalid sig return.
         const knownError = err as JwtError;
         if (knownError.message.includes("invalid signature")) {
-            res.status(401).json(err);
+            return res.status(401).json(err);
         };
         //if valid but expired
         if (knownError.message.includes("jwt expired")) {
@@ -44,11 +43,11 @@ export const deserializeUser = async (req: Request, res: Response, next: NextFun
                     res.cookie('accessToken', newAccessToken, { httpOnly: true, sameSite: "none", secure: true, maxAge: 24 * 60 * 60 * 1000 });
                     return next();
                 } else {
-                    res.status(401).json({ message: "RefreshToken invalid" });
+                    return res.status(401).json({ message: "RefreshToken invalid" });
                 }
 
             } catch (err) {
-                res.status(401).json(err);
+                return res.status(401).json(err);
             }
 
         }
