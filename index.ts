@@ -20,6 +20,8 @@ import formidable from 'formidable';
 import { fileURLToPath } from 'url';
 import path from 'path';
 import fs, { write } from 'fs';
+import { IGetUserAuthInfoRequest } from "./requestDefinitions/IGetUserAuthInfoRequest.js";
+
 
 const mg = mailgun.client({ username: 'api', key: process.env.MAILGUN_API_KEY || 'key-yourkeyhere' });
 const app = express();
@@ -27,8 +29,6 @@ app.use(express.json());
 // app.use(deserializeUser);
 app.use(cookieParser());
 app.use(cors({ credentials: true, origin: 'http://localhost:5173' }));
-
-
 
 mongoose.connect(process.env.MONGO_DB_URL!)
     .then((resp) => {
@@ -82,7 +82,6 @@ app.post('/register', async (req, res) => {
 
 app.post('/login', deserializeUser, async (req, res) => {
     //if user already exists bypass login process
-    //@ts-ignore
     if (req.user) {
         return res.status(200).json({ message: "authenticated" });
     }
@@ -110,8 +109,6 @@ app.post('/login', deserializeUser, async (req, res) => {
 })
 
 app.get('/blogs', deserializeUser, async (req, res) => {
-    //@ts-ignore
-    //@ts-ignore
     if (req.user) {
         try {
             const allBlogs = await NewBlogSchema.find()
@@ -125,10 +122,9 @@ app.get('/blogs', deserializeUser, async (req, res) => {
 });
 
 app.get('/logout', deserializeUser, async (req, res) => {
-    //@ts-ignore
     const { accessToken, refreshToken } = req.cookies;
     if (!refreshToken) return res.status(403).json({ "message": "User is not currently logged in" });
-    //@ts-ignore
+    if (!req.user) return res.status(403).json({ "message": "Something went wrong, please log in again" });
     let user = await UserModel.findOne({ email: req.user.email });
     if (user) {
         user.refreshToken = "";
@@ -146,13 +142,11 @@ const __dirname = path.dirname(__filename);
 // const uploadImagesFolder = path.join(__dirname, "public", "images");
 
 app.post('/newblogentry', deserializeUser, (req, res, next) => {
-    //@ts-ignore
     const form = formidable({});
     form.parse(req, (err, fields, files) => {
         if (err) return res.status(400).json(err);
-        if (Object.keys(files).length === 0) {
+        if (Object.keys(files).length === 0 && req.user) {
             const newBlog = new NewBlogSchema({
-                //@ts-ignore
                 email: req.user.email,
                 blogTitle: fields.blogTitle[0],
                 blogBody: fields.blogBody[0],
@@ -167,15 +161,18 @@ app.post('/newblogentry', deserializeUser, (req, res, next) => {
             fs.rename(oldPath, newPath, (err) => {
                 if (err) return console.log(err);
             });
-            const newBlog = new NewBlogSchema({
-                //@ts-ignore
-                email: req.user.email,
-                blogTitle: fields.blogTitle[0],
-                blogBody: fields.blogBody[0],
-                blogImageName: origNameDateStamped
-            })
-            newBlog.save();
-            return res.status(200).json({ "message": "blog successfully saved" });
+            if (req.user) {
+                const newBlog = new NewBlogSchema({
+                    email: req.user.email,
+                    blogTitle: fields.blogTitle[0],
+                    blogBody: fields.blogBody[0],
+                    blogImageName: origNameDateStamped
+                })
+                newBlog.save();
+                return res.status(200).json({ "message": "blog successfully saved" });
+            } else {
+                return res.status(400).json(err);
+            }
 
         }
     });
@@ -188,10 +185,10 @@ app.get('/images/:name', (req, res) => {
     return res.sendFile(joinedPath);
 })
 
-app.get('/auth', deserializeUser, async (req, res) => {
-    //@ts-ignore
+
+app.get('/auth', deserializeUser, (req, res) => {
     if (req.user) {
-        return res.json({ authenticated: true })
+        return res.json(req.user);
     } else {
         return res.status(401).json({ authenticated: false });
     }
