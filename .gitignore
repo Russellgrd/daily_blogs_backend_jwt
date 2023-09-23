@@ -21,6 +21,7 @@ coverage
 
 # API keys and secrets
 .env
+images
 
 # Dependency directory
 node_modules

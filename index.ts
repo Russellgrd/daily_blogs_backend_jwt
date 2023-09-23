@@ -20,8 +20,6 @@ import formidable from 'formidable';
 import { fileURLToPath } from 'url';
 import path from 'path';
 import fs, { write } from 'fs';
-import { IGetUserAuthInfoRequest } from "./requestDefinitions/IGetUserAuthInfoRequest.js";
-
 
 const mg = mailgun.client({ username: 'api', key: process.env.MAILGUN_API_KEY || 'key-yourkeyhere' });
 const app = express();
@@ -78,7 +76,6 @@ app.post('/register', async (req, res) => {
     }
 
 })
-
 
 app.post('/login', deserializeUser, async (req, res) => {
     //if user already exists bypass login process
@@ -185,7 +182,6 @@ app.get('/images/:name', (req, res) => {
     return res.sendFile(joinedPath);
 })
 
-
 app.get('/auth', deserializeUser, (req, res) => {
     if (req.user) {
         return res.json(req.user);
@@ -193,7 +189,6 @@ app.get('/auth', deserializeUser, (req, res) => {
         return res.status(401).json({ authenticated: false });
     }
 });
-
 
 app.listen(3000, () => {
     console.log('listening on port 3000');
