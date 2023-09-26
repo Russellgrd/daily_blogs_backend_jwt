@@ -19,12 +19,11 @@ const mailgun = new MailGun(formData);
 import formidable from 'formidable';
 import { fileURLToPath } from 'url';
 import path from 'path';
-import fs, { write } from 'fs';
+import fs from 'fs';
 
 const mg = mailgun.client({ username: 'api', key: process.env.MAILGUN_API_KEY || 'key-yourkeyhere' });
 const app = express();
 app.use(express.json());
-// app.use(deserializeUser);
 app.use(cookieParser());
 app.use(cors({ credentials: true, origin: 'http://localhost:5173' }));
 
