@@ -20,6 +20,7 @@ import formidable from 'formidable';
 import { fileURLToPath } from 'url';
 import path from 'path';
 import fs from 'fs';
+import { ObjectId } from 'mongodb';
 
 const mg = mailgun.client({ username: 'api', key: process.env.MAILGUN_API_KEY || 'key-yourkeyhere' });
 const app = express();
@@ -79,6 +80,7 @@ app.post('/register', async (req, res) => {
 app.post('/login', deserializeUser, async (req, res) => {
     //if user already exists bypass login process
     if (req.user) {
+
         return res.status(200).json({ message: "authenticated" });
     }
 
@@ -174,6 +176,36 @@ app.post('/newblogentry', deserializeUser, (req, res, next) => {
     });
 
 });
+
+app.post('/delete', deserializeUser, (req, res) => {
+    const reqEmail = req.body.email;
+    const userEmail = req.body.email;
+
+    const blogDetails: {
+        _id: mongoose.Types.ObjectId,
+        blogTitle: string,
+        blogBody: string,
+        blogImageName: string,
+        createdAt: string,
+        email: string
+    } = req.body;
+
+    const id = new mongoose.Types.ObjectId(blogDetails._id);
+    blogDetails._id = id;
+    if (reqEmail === userEmail) {
+        NewBlogSchema.findByIdAndDelete(blogDetails._id)
+            .then((data) => {
+                console.log("blog successfully deleted");
+                res.status(200).json({ "message": "blog has been deleted" })
+            })
+            .catch((err) => {
+                console.log(err);
+                res.status(400).json({ "message": "blog not deleted, not found" })
+            })
+    } else {
+        res.status(400).json({ "message": "Not authorized to delete this blog" })
+    }
+})
 
 app.get('/images/:name', (req, res) => {
     let imageName = req.params.name;
