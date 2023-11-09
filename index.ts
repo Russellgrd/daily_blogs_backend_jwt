@@ -80,8 +80,7 @@ app.post('/register', async (req, res) => {
 app.post('/login', deserializeUser, async (req, res) => {
     //if user already exists bypass login process
     if (req.user) {
-
-        return res.status(200).json({ message: "authenticated" });
+        return res.status(200).json({ message: "Successfully logged in. Redirecting." });
     }
 
     try {
@@ -99,10 +98,10 @@ app.post('/login', deserializeUser, async (req, res) => {
             res.cookie('accessToken', accessToken, { httpOnly: true, sameSite: "none", secure: true, })
             return res.json({ "message": "Successfully logged in. Redirecting." });
         } else {
-            return res.sendStatus(401).json({ message: "wrong username or password" });
+            return res.status(401).json({ message: "wrong username or password" });
         }
     } catch (err) {
-        return res.sendStatus(401).json({ message: "email or password in incorrect format" });
+        return res.status(401).json({ message: "email or password in incorrect format" });
     }
 })
 
@@ -148,6 +147,7 @@ app.post('/newblogentry', deserializeUser, (req, res, next) => {
                 email: req.user.email,
                 blogTitle: fields.blogTitle[0],
                 blogBody: fields.blogBody[0],
+                blogImageName: ""
             });
             newBlog.save();
             return res.status(200).json({ "message": "blog successfully saved" });
@@ -174,6 +174,43 @@ app.post('/newblogentry', deserializeUser, (req, res, next) => {
 
         }
     });
+
+});
+
+app.post('/editblogentry', deserializeUser, (req, res, next) => {
+    console.log('route hit');
+    const form = formidable({});
+    form.parse(req, async (err, fields, files) => {
+        console.log("FILES ARE");
+        console.log(files);
+        if (err) return res.status(400).json(err);
+        let fileAttached = false;
+        let fileName;
+        if (Object.keys(files).length > 0 && req.user) {
+            fileAttached = true;
+            const origName = files.blogImage[0].originalFilename;
+            const origNameDateStamped = Date.now() + origName!;
+            fileName = origNameDateStamped;
+            const oldPath = files.blogImage[0].filepath;
+            const newPath = path.resolve("images", origNameDateStamped!);
+            fs.rename(oldPath, newPath, (err) => {
+                if (err) return console.log(err);
+            });
+        }
+        const filter = { _id: fields._id };
+        const update: {
+            blogTitle: string,
+            blogBody: string,
+            blogImageName: undefined | string
+        } = {
+            blogTitle: fields.blogTitle[0],
+            blogBody: fields.blogBody[0],
+            blogImageName: fileAttached ? fileName : ""
+        }
+        const doc = await NewBlogSchema.findOneAndUpdate(filter, update);
+        console.log("doc is", doc);
+        res.json({ "message": "blog received" });
+    })
 
 });
 
