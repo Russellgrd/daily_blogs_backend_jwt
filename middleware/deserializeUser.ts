@@ -33,7 +33,9 @@ export const deserializeUser = async (req: Request, res: Response, next: NextFun
         if (knownError.message.includes("jwt expired")) {
             //validate refreshToken
             try {
-                // Fix bug where refresh token is no longer a cookie on client
+                if (!refreshToken) {
+                    return next();
+                }
                 const decoded = jwt.verify(refreshToken, process.env.REFRESH_TOKEN_KEY!) as JwtPayload;
                 const { email } = decoded;
                 const dbUser = await UserModel.findOne({ email })

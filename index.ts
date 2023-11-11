@@ -20,7 +20,6 @@ import formidable from 'formidable';
 import { fileURLToPath } from 'url';
 import path from 'path';
 import fs from 'fs';
-import { ObjectId } from 'mongodb';
 
 const mg = mailgun.client({ username: 'api', key: process.env.MAILGUN_API_KEY || 'key-yourkeyhere' });
 const app = express();
@@ -136,7 +135,6 @@ app.get('/logout', deserializeUser, async (req, res) => {
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-// const uploadImagesFolder = path.join(__dirname, "public", "images");
 
 app.post('/newblogentry', deserializeUser, (req, res, next) => {
     const form = formidable({});
@@ -178,11 +176,8 @@ app.post('/newblogentry', deserializeUser, (req, res, next) => {
 });
 
 app.post('/editblogentry', deserializeUser, (req, res, next) => {
-    console.log('route hit');
     const form = formidable({});
     form.parse(req, async (err, fields, files) => {
-        console.log("FILES ARE");
-        console.log(files);
         if (err) return res.status(400).json(err);
         let fileAttached = false;
         let fileName;
@@ -198,7 +193,7 @@ app.post('/editblogentry', deserializeUser, (req, res, next) => {
             });
         }
         const filter = { _id: fields._id };
-        const update: {
+        let update: {
             blogTitle: string,
             blogBody: string,
             blogImageName: undefined | string
@@ -207,8 +202,12 @@ app.post('/editblogentry', deserializeUser, (req, res, next) => {
             blogBody: fields.blogBody[0],
             blogImageName: fileAttached ? fileName : ""
         }
+
+        if (!update.blogImageName) {
+            delete update.blogImageName
+        }
         const doc = await NewBlogSchema.findOneAndUpdate(filter, update);
-        console.log("doc is", doc);
+        console.log(doc);
         res.json({ "message": "blog received" });
     })
 

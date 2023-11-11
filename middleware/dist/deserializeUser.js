@@ -66,6 +66,9 @@ exports.deserializeUser = function (req, res, next) { return __awaiter(void 0, v
                 _b.label = 3;
             case 3:
                 _b.trys.push([3, 5, , 6]);
+                if (!refreshToken) {
+                    return [2 /*return*/, next()];
+                }
                 decoded = jsonwebtoken_1["default"].verify(refreshToken, process.env.REFRESH_TOKEN_KEY);
                 email = decoded.email;
                 return [4 /*yield*/, User_js_1["default"].findOne({ email: email })];
